@@ -1,6 +1,5 @@
 """Command-line tools: `flask --app run.py <command>`."""
 import click
-import sqlalchemy as sa
 from flask import Flask
 
 from .extensions import db
@@ -11,9 +10,9 @@ def register_cli(app: Flask) -> None:
     @click.option("--drop", is_flag=True, help="Drop all tables first (deletes all data!).")
     def init_db(drop: bool):
         """Create the database (MySQL) and all tables, or upgrade an older database."""
-        from .upgrade import upgrade_database
+        from .upgrade import create_mysql_database_if_missing, upgrade_database
 
-        _create_mysql_database_if_missing(app)
+        create_mysql_database_if_missing()
         if drop:
             click.confirm("This deletes ALL data. Continue?", abort=True)
             db.drop_all()
@@ -71,16 +70,3 @@ def register_cli(app: Flask) -> None:
         clear_cache()
         click.echo(f"Re-indexed {len(files)} documents.")
 
-
-def _create_mysql_database_if_missing(app: Flask) -> None:
-    url = sa.engine.make_url(app.config["SQLALCHEMY_DATABASE_URI"])
-    if not url.drivername.startswith("mysql") or not url.database:
-        return
-    # Connect to the server without choosing a database (url.set(database=None) would keep the name).
-    server_url = sa.engine.URL.create(url.drivername, username=url.username, password=url.password,
-                                      host=url.host, port=url.port, query=url.query)
-    server = sa.create_engine(server_url)
-    with server.connect() as conn:
-        conn.execute(sa.text(
-            f"CREATE DATABASE IF NOT EXISTS `{url.database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
-    server.dispose()

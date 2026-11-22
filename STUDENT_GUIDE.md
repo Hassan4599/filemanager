@@ -125,7 +125,19 @@ When it says **"Setup complete"**, you are done. If it stops with an error, read
 > `DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@127.0.0.1:3306/file_organizer?charset=utf8mb4`
 > then run `setup.bat` again.
 
-### 4.4 Manual setup (macOS, or if you prefer typing commands)
+### 4.4 macOS / Linux — the easy way
+
+Start MySQL first (`brew services start mysql`, or XAMPP / MAMP), then in a terminal opened in the project folder:
+
+```bash
+./setup.sh        # once
+./start-dev.sh    # every day (Ctrl+C stops it)
+```
+
+`start-dev.sh` runs the backend on port **5001** on macOS (AirPlay uses 5000) and opens <http://localhost:5173>.
+If it says Python is too old: `brew install python@3.12`, then `PYTHON=python3.12 ./setup.sh`.
+
+### 4.5 Manual setup (if you prefer typing commands)
 
 Backend — in a terminal opened in the project folder:
 
@@ -172,7 +184,8 @@ npm install
      `demo@fileai.test` is not a real inbox, so once the email server is set up (Part 12) sign in with your own
      email instead. To get the sample files in your own account run, in `backend`:
      `flask --app run.py seed-demo --email you@gmail.com --password "YourPassw0rd!"`.
-     Only with `EMAIL_DEMO_MODE=true` and no email server is the code shown on screen (click **Use it**).
+     **No email server set up yet** (a fresh copy of the project)? Then the code is shown on the sign-in screen
+     (click **Use it**) and printed in the backend window, so `demo@fileai.test` works straight away.
 
 **Manual way** (or on macOS) — use two terminals:
 
@@ -258,7 +271,9 @@ Your data stays in MySQL and `backend/uploads/` for next time.
 |---|---|---|
 | `'python' is not recognized` | Python is not on PATH | Re-run the Python installer → **Modify** → tick **Add Python to environment variables**. Or reinstall and tick **Add python.exe to PATH**. Close and reopen Command Prompt. |
 | `'npm' is not recognized` | Node.js not installed or terminal opened before install | Install Node.js LTS, then **close and reopen** the terminal |
-| `Can't connect to MySQL server` / error **2003** | MySQL isn't running | Open Laragon → **Start All**, then try again |
+| `Can't connect to MySQL server` / error **2003**, or the website says *"The server can't reach its database"* | MySQL isn't running | Open Laragon → **Start All** (macOS: `brew services start mysql`), then try again |
+| Something doesn't work and you don't know why | — | Look at the **backend window**: when it starts it prints a short report (settings file, database, sign-in codes, AI, OCR) with what to fix |
+| Settings page says *Local model* / OCR *Not installed on the server* | No OpenAI key in `backend/.env` | Add `OPENAI_API_KEY=sk-...` to `backend/.env` (the file must be called exactly `.env`, inside `backend`) and restart the backend |
 | `Access denied for user 'root'` / error **1045** | Your MySQL has a password | Put it in `DATABASE_URL` in `backend\.env` (see [4.3](#43-run-the-setup-script-windows--the-easy-way)) |
 | Website says *"Can't reach the FileAI server"* | Backend is not running | Start it (Part 5) and check <http://127.0.0.1:5000/api/health> |
 | `Port 5173 is already in use` | The frontend is already running in another window | Close the other **FileAI Web** window, or just use the one already open |
@@ -267,7 +282,7 @@ Your data stays in MySQL and `backend/uploads/` for next time.
 | Image or scanned PDF shows *"OCR is not installed"* | Tesseract isn't installed | Expected without OCR. Install Tesseract (Part 12), or type the details in yourself and approve |
 | *"Too many failed sign-in attempts"* | Security lockout after 5 wrong passwords | Wait 5 minutes, or restart the backend window |
 | *"Your session has expired"* | Login lasts 30 minutes | Sign in again |
-| Where is my sign-in code? | It is emailed (check the spam folder too) | *"The email server isn't set up"* means `SMTP_HOST` is empty in `backend\.env`: see Part 12 |
+| Where is my sign-in code? | With an email server it is emailed (check spam too); without one it is shown on the sign-in screen | *"The email server isn't set up"* means `SMTP_HOST` is empty **and** `EMAIL_DEMO_MODE=false` in `backend\.env`: set `EMAIL_DEMO_MODE=true` or see Part 12 |
 | *"We couldn't send the verification email"* | The SMTP settings in `backend\.env` are wrong | Check `SMTP_HOST`, `SMTP_USERNAME` and the Gmail **app password**, then run `flask --app run.py send-test-email you@gmail.com` |
 | *"This code has expired"* / *"Too many wrong codes"* | Codes last 10 minutes and allow 5 tries | Click **Resend code** |
 | `Unknown column 'files.deleted_at'` | Database made by v0.1 | Restart the backend (it upgrades the database itself), or run `.venv\Scripts\python -m flask --app run.py init-db` once |
@@ -345,16 +360,16 @@ All of these are switched on in `backend\.env`. **Restart the backend window aft
 3. Check it: `flask --app run.py send-test-email you@gmail.com` (in `backend`, with the venv on).
 4. Restart the backend. Codes are now emailed and are **never shown on screen**.
    To switch two-step verification off completely (not recommended): `TWO_FACTOR_ENABLED=false`.
-   Classroom demo with no email server at all: `EMAIL_DEMO_MODE=true` shows the code on screen instead.
+   With no email server, `EMAIL_DEMO_MODE=true` (the default) shows the code on screen instead; on a real
+   server set `EMAIL_DEMO_MODE=false` so codes can only be emailed.
 
 **OpenAI GPT instead of the built-in AI**
 
 ```text
-AI_PROVIDER=openai
 OPENAI_API_KEY=sk-...your key...
 ```
 
-If the API fails, the app automatically falls back to the built-in AI. Never commit your real key — `.env` is ignored by Git on purpose.
+GPT is used automatically once a key is set (`AI_PROVIDER=local` forces the built-in AI). If the API fails, the app automatically falls back to the built-in AI. Never commit your real key — `.env` is ignored by Git on purpose.
 
 **AWS S3 instead of the local `uploads` folder**
 
